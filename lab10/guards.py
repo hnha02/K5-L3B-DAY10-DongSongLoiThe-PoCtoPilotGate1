@@ -36,6 +36,8 @@ Cổng vòng 1 của bàn DongSongLoiThe (mỗi cổng ứng với một dòng p
   G3  notify_carrier       chỉ gửi cho hãng đúng các trường chính sách cho phép (carrier_notice_fields)
 Không cổng nào đọc mã ticket: mọi quyết định dựa vào DB, chính sách, phê duyệt, sổ cái.
 """
+import re
+
 from . import helpers as H  # noqa: F401
 from .tools import Verdict
 
@@ -74,11 +76,29 @@ def _approval_ok(ctx, approval_id, order_id, amount):
 
 
 # ---------- P0 · ghim chính sách theo ngày hiệu lực ----------
+# ---------- V2 (thẻ S1) · P1 dữ liệu tracking thiếu · P2 bỏ số ngày khách tự khai ----------
+
+_CLAIMED_DAYS = re.compile(r"\d+\s*(?:ngày|hôm|bữa|tuần|days?|weeks?)", re.IGNORECASE)
+
 
 def pre_guard(ctx):
     policy = _policy(ctx)
     if policy is None:
         return Verdict.escalate("không xác định được chính sách hiệu lực hôm nay")
+    # P1: kiện đã giao (status DELIVERED) mà thiếu delivered_date thì độ trễ bị tính tới hôm nay → sai; chuyển người
+    order = ctx.tools.lookup_order(ctx.ticket.get("order_id"))
+    if order and order.get("customer_id") == ctx.ticket.get("customer_id") and order.get("parcels"):
+        parcel = H.ticket_parcel(order, ctx.ticket, ctx.as_of)
+        if parcel.get("status") == "DELIVERED" and not parcel.get("delivered_date"):
+            ctx.log("tracking_incomplete", parcel_id=parcel["parcel_id"], missing="delivered_date")
+            return Verdict.escalate(f"kiện {parcel['parcel_id']} đã giao nhưng thiếu ngày giao trong tracking: "
+                                    f"không tính được độ trễ, chuyển người")
+    # P2: số ngày khách tự khai (cả nhiều hơn lẫn ít hơn DB) không được đè lên tracking DB → bỏ khỏi chữ model đọc
+    text = ctx.ticket.get("text") or ""
+    if _CLAIMED_DAYS.search(text):
+        ctx.log("claimed_days_removed", found=_CLAIMED_DAYS.findall(text))
+        return Verdict.rewrite("bỏ số ngày khách tự khai; độ trễ lấy từ tracking DB",
+                               _CLAIMED_DAYS.sub("một thời gian", text), policy_id=policy["policy_id"])
     return Verdict.allow(policy_id=policy["policy_id"])
 
 
@@ -92,6 +112,25 @@ def write_gate(ctx, action):
         return _gate_fault(ctx, action)
     if tool == "notify_carrier":
         return _gate_notify(ctx, action)
+    if tool == "send_reply":
+        return _gate_reply(ctx, action)
+    return Verdict.allow()
+
+
+def _gate_reply(ctx, a):
+    """G4 (vòng 2): không từ chối khách khi tracking DB cho thấy khách được hoàn (hoàn thiếu là lỗi chìm)."""
+    if a.get("amount_vnd", 0) > 0 or ctx.tools.ledger_rows(order_id=ctx.ticket.get("order_id")):
+        return Verdict.allow()
+    if not any(e.get("type") == "proposal" for e in ctx.events):   # câu trả lời thông tin, không phải quyết định hoàn
+        return Verdict.allow()
+    facts = _facts(ctx, ctx.ticket.get("order_id"))
+    if facts is None:
+        return Verdict.allow()
+    order, parcel, delay, policy = facts
+    owed = H.entitlement_vnd(policy, order, delay, parcel.get("delay_cause"))
+    if owed > 0:
+        ctx.log("under_refund_blocked", owed=owed, db_delay_days=delay)
+        return Verdict.escalate(f"định từ chối nhưng theo tracking DB khách được hoàn {owed}đ: chuyển người")
     return Verdict.allow()
 
 

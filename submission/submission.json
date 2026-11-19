@@ -5,12 +5,12 @@
     "NguyenNghiemKhanhTiep-2A202603863",
     "PhungThiNhai-2A202603725"
   ],
-  "incident": "",
-  "decision_v1": "",
-  "decision_v2": "",
+  "incident": "S1",
+  "decision_v1": "Thu hẹp",
+  "decision_v2": "Tiếp tục",
   "three_lines": {
-    "environment_assumption": "",
-    "reduce_or_prevent": "",
-    "measure_in_pilot": ""
+    "environment_assumption": "Điểm phát luôn nhập `delivered_date` ngay khi giao và `status` luôn khớp với nó; nếu cả hai cùng chưa cập nhật (nhập bù cuối ngày, giờ cao điểm) thì độ trễ vẫn bị tính tới hôm nay và hãng vẫn có thể bị ghi lỗi oan.",
+    "reduce_or_prevent": "NGĂN với nhánh khách khai lệch DB (G4 so với quyền lợi tính từ tracking, không đọc chữ khách) và nhánh kiện đã giao thiếu ngày giao (P1 chặn trước mọi lệnh ghi); chỉ GIẢM với nhánh lỗi dồn về một hãng, vì trần G2 tính theo ngày còn hợp đồng tính 3 lỗi/7 ngày, và vì mọi cổng đều tin chính tracking DB.",
+    "measure_in_pilot": "Tỉ lệ kiện đã giao mà thiếu `delivered_date` theo từng hãng và từng giờ (mock S1 có 2/13 đơn); số lỗi tự ghi cho mỗi hãng trong 7 ngày so với ngưỡng tạm ngưng; và tỉ lệ ca chuyển người thực tế (S1 tăng 0,15 → 0,31) so với sức duyệt 6 ca/giờ của NV-HANH."
   }
 }
