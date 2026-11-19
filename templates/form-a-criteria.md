@@ -1,6 +1,6 @@
 # Phiếu A · Tiêu chí và cách đo · Khối 1 (phút 15–65)
 
-**Bàn:** ______ · **Người cầm bút chính:** vai Sản phẩm và kinh doanh (câu 1.3: Kỹ sư cổng; câu 1.2, 1.4: Vận hành và pháp lý)
+**Bàn:** K5-L3B-DAY10-DongSongLoiThe-PoCtoPilotGate1 · **Người cầm bút chính:** vai Sản phẩm và kinh doanh (câu 1.3: Kỹ sư cổng; câu 1.2, 1.4: Vận hành và pháp lý)
 
 Điền phiếu này **trước khi chạy trợ lý lần nào**. Viết xong thì chép ngưỡng sang `config/acceptance_criteria.json`, ký ở phút 60–65,
 rồi mới chạy đánh giá. Khối 1 không sửa code.
@@ -20,7 +20,7 @@ rồi mới chạy đánh giá. Khối 1 không sửa code.
 
 ### Câu 1.1 · Một mục tiêu cấp hệ thống (khác "model trả lời đúng")
 
-> …
+> Mỗi yêu cầu hoàn tiền giao trễ đủ điều kiện được xử lý xong: hoàn đúng số tiền tính từ tracking DB theo chính sách đang hiệu lực, ghi lỗi đúng hãng và đúng kiện, trả lời khách khớp sổ cái. Việc xử lý không được gây thiệt hại cho bên thứ ba (hãng, shop, người nhận). Ca nào vượt hạn mức hoặc ngoài phạm vi tự động đều phải tới tay người duyệt trong 60 phút (PRD v1.1 §3).
 
 ### Câu 1.2 · Mục tiêu nhìn từ hai người
 
@@ -71,9 +71,9 @@ nhau chia cho số lần chạy có sự kiện `proposal`; lần chạy không 
 
 ### Câu 1.5 · Chọn MỘT kết luận và giải thích một câu
 
-Số minh hoạ trong đề (không phải số của bàn). Khoanh: **(a) · (b) · (c) · (d)**
+Số minh hoạ trong đề (không phải số của bàn). Khoanh: **(b)**
 
-Giải thích một câu: …
+Giải thích một câu: Y chỉ hơn X đúng 1/50 lần chạy, và 1,0 nằm trong khoảng tin cậy 95% [0,9400; 1,0] của X, nên chênh lệch này có thể chỉ do ngẫu nhiên. Vì vậy chưa đủ căn cứ nói Y tốt hơn, cũng không suy ra được hai bản "chắc chắn như nhau" như (c).
 
 ---
 
