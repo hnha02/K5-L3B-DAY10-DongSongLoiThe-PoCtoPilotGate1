@@ -24,8 +24,8 @@ rồi mới chạy đánh giá. Khối 1 không sửa code.
 
 ### Câu 1.2 · Mục tiêu nhìn từ hai người
 
-- Chị Oanh, kế toán đối soát (không dùng trợ lý, nhưng phải khớp sổ với hãng và shop mỗi tuần): …
-- Chị Hạnh, trưởng ca CSKH (phải duyệt những ca trợ lý chuyển sang): …
+- Chị Oanh, kế toán đối soát (không dùng trợ lý, nhưng phải khớp sổ với hãng và shop mỗi tuần): mỗi tuần, mọi dòng trợ lý ghi đều khớp được với nguồn sự thật mà PRD v1.1 §2 quy định: số tiền hoàn tính từ độ trễ **theo DB** (không theo số khách tự khai trong ticket), đúng chính sách đang hiệu lực, đúng người trả (LOGIX hay shop), lỗi ghi đúng hãng và đúng kiện, và số tiền trả lời khách khớp sổ cái (FM-08, `reply_matches_ledger` = 1.0 ở PRD §3). Đo bằng số dòng chị phải gỡ hoặc tranh chấp với hãng, shop khi đối soát tuần: mục tiêu 0. PRD §6 ghi trace không lưu lời gọi `issue_refund`, chỉ có sổ cái, nên sổ cái là thứ duy nhất chị dựa vào được.
+- Chị Hạnh, trưởng ca CSKH (phải duyệt những ca trợ lý chuyển sang): ca nào trợ lý chuyển sang (đơn của người khác, vượt hạn mức, hàng hỏng hay thất lạc: các ca PRD §2 để ngoài phạm vi tự động) cũng được nhận trong 60 phút (`ops_limits.review_sla_minutes`), với 1 người trực duyệt được 6 ca/giờ (`ops_facts`). Mỗi ca kèm lý do chuyển để chị duyệt xong trong khoảng 10 phút. Không có khoản hoàn nào dùng phê duyệt đứng tên NV-HANH khi phê duyệt đó không hợp lệ theo PRD §2 (hết hạn, đã dùng hoặc thu hồi, `approval_id` không khớp claim, hoặc vượt `max_vnd`), vì chị là người đứng tên và phải giải trình.
 
 ---
 
@@ -48,12 +48,12 @@ trợ lý có đang gây thiệt hại cho bên ngoài LogiX không; không có 
 
 | | Offline, cho MỘT bước (câu 1.3) | Telemetry production (câu 1.4) |
 |---|---|---|
-| **Bước / hành vi được đo** | | |
-| **Thước đo** (một câu, có đơn vị) | | |
-| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | | |
-| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | | |
-| **Khung thời gian / ngưỡng báo động** | (không áp dụng) | |
-| **Điểm mù** (thước đo này KHÔNG thấy gì) | | |
+| **Bước / hành vi được đo** | | Lệnh ghi `file_carrier_fault`: trợ lý ghi lỗi giao trễ cho hãng vận chuyển (bên thứ ba, bị phạt 80.000–150.000đ mỗi lỗi; GHSH và DNB bị đình chỉ khi đủ 3 lỗi trong 7 ngày) |
+| **Thước đo** (một câu, có đơn vị) | | (a) Số lỗi trợ lý tự ghi cho **mỗi hãng** trong 24 giờ (lỗi/hãng/ngày); (b) số lỗi **không khớp nguồn sự thật**: `delay_days` ghi cho hãng khác độ trễ tính từ tracking DB, hoặc kiện không có `delay_cause` ghi trong tracking (số lỗi/ngày) |
+| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | | Bảng lỗi hãng (`fault_rows`: `carrier_id`, `parcel_id`, `delay_days`) và tracking DB (`orders[].parcels`: `promised_date`, `delivered_date`, `delay_cause`). Lấy toàn bộ lỗi ghi trong ngày, không lấy mẫu. **Không ai gán nhãn**: tín hiệu thay nhãn là so lỗi đã ghi với tracking DB (`helpers.db_delay_days`) và với trần `ops_limits.max_auto_strikes_per_carrier_per_day = 2` |
+| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | | (a) Đếm số dòng lỗi theo `carrier_id` trong cửa sổ 24 giờ. (b) Đếm số dòng mà `delay_days` ghi ≠ `db_delay_days(parcel)` HOẶC `delay_cause` của kiện trống / không thuộc `fault_causes` của chính sách đang hiệu lực. Không tìm thấy kiện trong DB (`parcel_id` lạ) thì tính vào (b), không bỏ qua |
+| **Khung thời gian / ngưỡng báo động** | (không áp dụng) | Cửa sổ trượt 24 giờ, xét lại sau mỗi lệnh ghi lỗi; cộng dồn thêm 7 ngày cho từng hãng. **Vàng:** một hãng có 2 lỗi trong ngày (chạm trần Ops), hoặc còn 1 lỗi nữa là tới ngưỡng đình chỉ 7 ngày → báo kênh trực, lỗi tiếp theo của hãng đó chuyển NV-HANH duyệt. **Đỏ:** (b) ≥ 1 trong ngày, hoặc một hãng có ≥ 3 lỗi/ngày → NV-TUNG tắt `file_carrier_fault` trong `config/switches.json`, NV-OANH rà lại các lỗi đã ghi trong ngày trước khi gửi phạt |
+| **Điểm mù** (thước đo này KHÔNG thấy gì) | | Không thấy trường hợp chính tracking DB sai (quét sót, nhập bù tay ghi sai nguyên nhân); không thấy lỗi ghi đúng số nhưng sai người chịu bên trong hãng (sai tài xế); không đo thiệt hại cho khách và shop (hoàn sai tiền, lộ dữ liệu người nhận cần chỉ số khác). Đếm gộp mọi hãng thì có thể che một hãng nhỏ đang bị dồn lỗi, giống rủi ro "chưa có slice gate" ở PRD v1.1 §6; vì vậy (a) phải tính riêng từng hãng |
 
 **Ví dụ mẫu (bước "chọn độ trễ" của agent, đừng chép):**
 Thước đo: tỉ lệ lần chạy mà độ trễ agent dùng để tính tiền khác độ trễ theo tracking DB. Dữ liệu: sự kiện `proposal.delay_days_used`
